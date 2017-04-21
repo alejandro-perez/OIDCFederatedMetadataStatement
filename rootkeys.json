@@ -1,0 +1,86 @@
+{
+  "https://edugain.com": {
+    "keys": [
+      {
+        "e": "AQAB",
+        "kid": "ck8yJKny9s2dGavjQ4NMZYEIiExaPOEjTIygCz1OnS0",
+        "kty": "RSA",
+        "n": "s0juoO0JJBd1u0oLkML71tXfyQv_Re7tD0inu8jzshMg-97DQjajoCyKfXgSmx0mVcBETE3wKFHeEShH4gDZDdlvrBFciHi7SmlJabgznu4rairfHHrBr2H3HwL6Vp7OyUkQLVUkmAqTR_ZUuNXnkyr3SQ0PjVrhLQQJ60RFHmw8AAer-cIgJDzpwiSG7Lh6u9PqufDw2-Go_xqEvyMvEFdyxbRdWmwCRHHNWn2ICU-1avfKt6eF8z-WDsThG4FvOiU3tWR45hLXUM4r78JznHsbCNVGXESsABgdbyDH_QUuhXFiu3_onzeKXfl7YOg3jMxSZXYo5-opNToOKl0ILQ",
+        "use": "sig"
+      },
+      {
+        "kid": "2kmUXi6jS9rQ6BzWst2rJGwwXvZSfwRouR1u8ezSpfA",
+        "kty": "RSA",
+        "use": "sig",
+        "n": "wTc569WwiJU6QBPgnSu8rtQTt4Gq-rOX3COcWNIc_wEhlMX3NjQI5ybNvII_D3PCLA_E0hkxKDKlzQ0zx2z8fMrX2XqS8mOZFJyCUzk1eWefvkDPK6mcO4EhEuDsAkZ2pqhYgTKIUg_g-b3FgFwanUPJtnkZzbcTfy4fyVUPdhTXUS4LhvI6B6RTCIpQW1ziygLhDSyglPnSFbhFDsvQFUf3uaF4kc6bgu1LtnUT1VN3WTvMw-MXZuPXiPHu-eUeVmKI29cg1DVzNLqQfPhxwtDhM7FhN1bYbs2Xgl5lLiaYUkc2_5wi0RZUhw5_JLYE5FYPbtvzsUvu76IsMssDUQ",
+        "e": "AQAB"
+      },
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "y": "1iZntic5EqwhkGK9h6AVf7tkcEmuukv1itCbh45xZtc",
+        "use": "sig",
+        "x": "XvHoQhsv8v48QL_L86wBYUsywzXf6Uv179Og3zy7LYc",
+        "kid": "4ObcVvr2xZb0WG3sRpKBc7bgPm8-_4QeQ9cPeURh6C4"
+      }
+    ]
+  },
+  "https://swamid.sunet.se": {
+    "keys": [
+      {
+        "e": "AQAB",
+        "kid": "5kxfxoFzKY-oNRf5KfbIv23x6bY73_41qYmgfxpabGs",
+        "kty": "RSA",
+        "n": "hBgmjxbY6HLJLnoe_DwDGxMX3lUUD0Rjf0e2M75_C2TXN29Im77XsFNkTwKaMie_Dnj4eTTgJu6whXbQpUhoNm4aOjYqkxJV9KyMwOT_M23wX8sds4taHz_0wtQGjUZpUw-sIAot4WLowLyLJOGyiIYQ47l4uBBtOinMzTN_G6-AKE67x6-76bjjnoXz3qF7aanBtPunbVruE6vDv7DJ1nO_oYxhstaCih9oxrMmXD990-yAtGn9JhUuOOQtyXDf4e9BuByKf0JcjELMizwKhv9hQMSgFXhI9Vnt7ksjXYmnUU0PkaRm7ju6jdBhBSJyzqnw-NkdQLQrZPFBM2Dssw",
+        "use": "sig"
+      },
+      {
+        "kty": "RSA",
+        "use": "sig",
+        "kid": "PJ632c0X_IVSmHVvvDQ_JWC5qmkBom-MyC1j02Y2SXE",
+        "n": "u-3Wm6IOE-EbZ8J-cE_bSLGsY1dLgaaaKdwVrboUdGiRofmW2COfYj_ftp7WtmMdVoJ9LhOacMF7Pr1Bx5xnhZcRVla1hGqAakm0dQXHI5RQMd8I1bntvdMOY_6XY_NgC9Gx_Yt2mXFyS4HdOtEnhTHYAg1kGbqXfJBiX9AHhbZUUSxrF-YTJhZK26wKOZKRlxoKrFFyoIdq51Bo7XCryGYiA9mI9oLsSULBhnmx84VBolpKblr6iqAYAUrwTDdXMUxWApE7RgcYsOj8WV8npB_Tcz-5vTVSkSGCS95vgnX_0eCX5h_3kyFnNVHvczxkbbjBwaTzRJ7pYgpwOnwEpw",
+        "e": "AQAB"
+      },
+      {
+        "use": "sig",
+        "e": "AQAB",
+        "kty": "RSA",
+        "kid": "DQBaJ_X3Z45GBxNudmhTD6FezSmgskbdg1Ch0LP59Zw",
+        "n": "nRWtrfhxkBR9mrUDFnH5QN5V5Mo6AcLq8odKIvPIYpz3d1fucMvk2jRdq0WDnXjmWgbz-YcRoB9Q_hjQiYa86iYVt4HD9e22ookgmEY_E_Xf_olD8VBGo4RrluS2jJ4_VFAWiy1yKnuxWyCsNsJbxOldLocxmr8xcc-bAS7gn-wMVgEQsHr_GeiE2zagA4SiL_TTW8T7_PrCu7vjNvnybot9m7vAtk9FM0-3u_Pirjr0sRJ6dM58QSTH0mGJANIVQREAXwm-CeL8PBvQCGM0NrncL2WSw3EnG8_x_NBOV-DEZbb7Hxlu6IWTuIXinNognLfhauXBObXV7UNhDFLunQ"
+      },
+      {
+        "kid": "ihRpWzYYx6yP_Ny3OGoCmBxjl9K1ycs_SrSEVwP8eD8",
+        "kty": "RSA",
+        "use": "sig",
+        "n": "ntIVVOM62XOLscH1C8BfAbr2BL67sW1eWEGokGDUabEqsvAKzZCiQfYMvpnhou6kXhtxXOMttzchGpI2rflElWd581GfyXsHJ1EY8hwFQpJsCJSGdKhFtKBqcTLv5qRyWq4T2Q-WqJuHx0Ph1o2Mu5sk5xwSYbhomKmJTmsi-rCpZHtj30n_COK-nSTW-Pxegd4Z6uqTGF3C56DR1J_-SGnJsIfMAfEV6QSsGeJTQp_aL0n7Uw1kG4u_-1rB928FZBOqT1kPq_qrP-6X3lx_43LqanhOHtt106v_VypfjkVvSzbjOrL0mvkIfsFYN8qmysSLLbVMbIgPxls4MEl9Tw",
+        "e": "AQAB"
+      },
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "y": "YjeDuiwhxcIHvzS61tUNvyGWpn-PvD0s-E2dXndVmv0",
+        "use": "sig",
+        "x": "RW5AVta_Jm4CMWEU71rH3e-Fwfmu2oN9poF6jhtJ5XY",
+        "kid": "6VX4aRYeuBpNw-S4ovg1NXs45YiTVDwGs82Pkl3I43I"
+      }
+    ]
+  },
+  "https://example.com": {
+    "keys": [
+      {
+        "e": "AQAB",
+        "kid": "IE9j7bhLiWnP9mSaC90_tEYZ0VLWplexcRXILgyDlIk",
+        "n": "orhW0TRv1yjiuvjBnmlrB1kAMPqN0G9-P1xt49kSQcPPvGrUZv4TolTs86voRo9TNAUHU1jN1P55WRiJRkBTEajFg5vl9tASWNX0Pk8wYUQHnR-miJS-fUl8IU-QjvdwswhBTFQNfMIfh9qNMtRSR3d-7e2u78109w_DQ_Z9EOwHG9QpXIft33MSvIh3AZaN7yA5SQp3QQEZtnhNgk3BLr6oA0YD55oaa7nv20THFtlRuczlXZKzJ10vmkmsTrCKTVY1bAUcFTyiNrDRwEaffhPxX_b8RsYMfP4j7GP2NopjsGbz-Kv3PQjoUHRJDerDE88iCMcKss-iGNkeg23CMQ",
+        "kty": "RSA",
+        "use": "sig"
+      },
+      {
+        "kid": "7TnWOKF0Znlsf-ok08w7oFL474A4IuxOQqwSIlz3MS4",
+        "kty": "RSA",
+        "use": "sig",
+        "n": "otD_zD70kTHNMKF-SxbB_u9_v4edwGB3vKRfF2WnR2Cq4qqfFEJPb_KuISoiHstSpsgHgs7EDL2P9_0RQcgip_ctYOrISllRBKcLYJ8tOOQENQyJKngoOsm6IkUxPHQ8PVwbTemvZqbvtzC04YwK2c14nmZter9LXwChAZtB80ZzktsUw9_PUcDiR7EyeVh2cSzaZ14dFmwSHoUa0QWMdjJTRqiD8Hv78mk1GtuRmlE28TdJXk-8fpf9wNwOg29R840qBN7UtPiDb7Gk6DA7mnLPUVsiqrsXROrnPtenh_G_VhWqgn1zM1GMypkfHeWNKmDG5-x0DAB60VvqIrcg6Q",
+        "e": "AQAB"
+      }
+    ]
+  }
+}
