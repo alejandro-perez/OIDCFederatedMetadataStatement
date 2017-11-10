@@ -12,7 +12,6 @@ import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -23,16 +22,23 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * This class allows getting and validating federated metadata statements, as defined in the OIDC federation draft.
+ */
 public class FederatedMetadataStatement {
+    /**
+     * Indicates the maximum amount of clock skew (in seconds) that we allow to verify JWT signatures
+     */
+    public static int MAX_CLOCK_SKEW = 60;
+
     /**
      * Indicates whether an object is a subset of another one, according to the OIDC Federation draft.
      *
      * @param obj1 One object.
      * @param obj2 Another object.
      * @return True if obj1 is a subset of obj2. False otherwise.
-     * @throws JSONException when the objects have an unexpected type.
      */
-    private static boolean isSubset(Object obj1, Object obj2) throws JSONException {
+    private static boolean isSubset(Object obj1, Object obj2) {
         if (!obj1.getClass().equals(obj2.getClass()))
             return false;
         else if (obj1 instanceof String)
@@ -69,20 +75,20 @@ public class FederatedMetadataStatement {
                     return false;
             }
             return true;
-        } else
-            throw new JSONException("Unexpected JSON class: " + obj1.getClass().toString());
+        }
+        return false;
     }
 
     /**
      * Flatten two metadata statements into one, following the rules from the OIDC federation draft.
      *
-     * @param upper MS (n)
+     * @param upper MS(n)
      * @param lower MS(n-1)
      * @return A flattened version of both statements.
-     * @throws JSONException when upper MS tries to overwrite lower MS breaking the policies
-     * from the OIDC federation draft.
+     * @throws InvalidStatementException when there is a policy break and upper MS tries to overwrite lower MS
+     *                                   breaking the policies from the OIDC federation draft.
      */
-    private static JSONObject flatten(JSONObject upper, JSONObject lower) throws JSONException {
+    private static JSONObject flatten(JSONObject upper, JSONObject lower) throws InvalidStatementException {
         String[] use_lower = {"iss", "sub", "aud", "exp", "nbf", "iat", "jti"};
         String[] use_upper = {"signing_keys", "signing_keys_uri", "metadata_statement_uris", "kid",
                 "metadata_statements", "usage"};
@@ -106,9 +112,8 @@ public class FederatedMetadataStatement {
 
             /* Else -> policy breach */
             else {
-                throw new JSONException("Policy breach with claim: " + claim_name
-                        + ". Lower value=" + lower.get(claim_name)
-                        + ". Upper value=" + upper.get(claim_name));
+                throw new InvalidStatementException("Policy breach with claim: " + claim_name
+                        + ". Lower value=" + lower.get(claim_name) + ". Upper value=" + upper.get(claim_name));
             }
         }
         return flattened;
@@ -119,32 +124,34 @@ public class FederatedMetadataStatement {
      *
      * @param signedJWT Signed JWT
      * @param keys      Keys that can be used to verify the token
-     * @throws BadJOSEException when the JWT is not valid
-     * @throws JOSEException    when the signature cannot be validated
+     * @throws InvalidStatementException when the JWT is not valid or the signature cannot be validated
      */
-    private static void verifySignature(SignedJWT signedJWT, JWKSet keys)
-            throws BadJOSEException, JOSEException {
+    private static void verifySignature(SignedJWT signedJWT, JWKSet keys) throws InvalidStatementException {
         ConfigurableJWTProcessor jwtProcessor = new DefaultJWTProcessor();
         JWSKeySelector keySelector = new JWSVerificationKeySelector(
                 signedJWT.getHeader().getAlgorithm(), new ImmutableJWKSet(keys));
         DefaultJWTClaimsVerifier cverifier = new DefaultJWTClaimsVerifier();
         /* Allow some clock skew as testing platform examples are static */
-        cverifier.setMaxClockSkew(50000000);
+        cverifier.setMaxClockSkew(FederatedMetadataStatement.MAX_CLOCK_SKEW);
         jwtProcessor.setJWTClaimsSetVerifier(cverifier);
         jwtProcessor.setJWSKeySelector(keySelector);
-        jwtProcessor.process(signedJWT, null);
+        try {
+            jwtProcessor.process(signedJWT, null);
+        } catch (BadJOSEException | JOSEException e) {
+            throw new InvalidStatementException(e.getMessage());
+        }
     }
 
     /**
-     * Collects inner metadata statement for a specific FO
+     * Collects inner metadata statement for a specific Federation Operator, either from "metadata_statements"
+     * or from "metadata_statatement_uris".
      *
      * @param payload Metadata statement containing inner metadata statements
+     * @param fed_op  Name of the Federation Operator
      * @return A MS for the specified FO. Null if not found
-     * @throws IOException   when a "metadata_statement_uris" key cannot be downloaded
-     * @throws JSONException when a JSON exception occurs
+     * @throws InvalidStatementException when a "metadata_statement_uris" key cannot be downloaded
      */
-    private static String getMetadataStatement(JSONObject payload, String fed_op)
-            throws IOException, JSONException {
+    private static String getMetadataStatement(JSONObject payload, String fed_op) throws InvalidStatementException {
         JSONObject ms = payload.optJSONObject("metadata_statements");
         JSONObject ms_uris = payload.optJSONObject("metadata_statement_uris");
         if (ms != null && ms.has(fed_op))
@@ -152,7 +159,11 @@ public class FederatedMetadataStatement {
         if (ms_uris != null && ms_uris.has(fed_op)) {
             System.out.println("Getting MS for " + fed_op + " from " + ms_uris.getString(fed_op));
             System.out.println(payload.toString());
-            return IOUtils.toString(new URL(ms_uris.getString(fed_op)).openStream(), Charset.defaultCharset());
+            try {
+                return IOUtils.toString(new URL(ms_uris.getString(fed_op)).openStream(), Charset.defaultCharset());
+            } catch (IOException e) {
+                throw new InvalidStatementException(e.getMessage());
+            }
         }
         return null;
     }
@@ -160,13 +171,14 @@ public class FederatedMetadataStatement {
     /**
      * Decodes, verifies and flattens a compounded MS for a specific federation operator
      *
-     * @param ms_jwt Encoded JWT representing a signed metadata statement
-     * @return A JSONObject (dict) with a entry per federation operator with the corresponding
-     * flattened and verified MS
-     * @throws IOException Thrown when some network resource could not be obtained
+     * @param ms_jwt    Encoded JWT representing a signed metadata statement
+     * @param fed_op    Name of the Federator Operator
+     * @param root_keys Collection of JWSK of the accepted FO
+     * @return A flattened and verified MS
+     * @throws InvalidStatementException When the compounded statement is invalid (invalid signature, flattening, etc.)
      */
     private static JSONObject verifyMetadataStatement(String ms_jwt, String fed_op, JSONObject root_keys)
-            throws JSONException, BadJOSEException, JOSEException, ParseException, IOException {
+            throws InvalidStatementException {
         try {
             /* Parse the signed JWT */
             SignedJWT signedJWT = SignedJWT.parse(ms_jwt);
@@ -209,39 +221,34 @@ public class FederatedMetadataStatement {
             System.out.println("Successful validation of signature of " + payload.getString("iss")
                     + " with KID:" + signedJWT.getHeader().getKeyID());
             return result;
-        }
-        /* In case of any error, print a log message and let the exception flow */
-        catch (JOSEException | JSONException | ParseException | IOException | BadJOSEException e) {
-            System.out.println("Error validating MS. Ignoring. " + e.toString());
-            throw e;
+        } catch (ParseException e) {
+            throw new InvalidStatementException(e.getMessage());
         }
     }
 
     /**
-     * Given a discovery document, try to get a federated/signed version of it
+     * Given an unsigned metadata statement document (either Server dicovery document or Client dynamic registration
+     * one, get a federated/signed version of it (if available)
      *
-     * @param discovery_doc Discovery document as retrieved from .well-known/openid-configuration
-     * @return A discovery document which has been validated using a supported federation
+     * @param unsigned_ms Unsigned metadata statement
+     * @param root_keys   JSON Object containing an entry per accepted FO, each one with a JWKS
+     * @return A metadatata statement which has been validated using a supported FO.
+     * @throws InvalidStatementException When there is a problem with the validation of the federated MS
      */
-    public static JSONObject getFederatedConfiguration(JSONObject discovery_doc, JSONObject root_keys) {
-        try {
-            // Get the inner metadata statement for the first trusted FO
-            for (Iterator<String> it = root_keys.keys(); it.hasNext(); ) {
-                String fed_op = it.next();
-                System.out.println("Looking for a valid metadata_statement for " + fed_op);
-                String ms_jwt = getMetadataStatement(discovery_doc, fed_op);
-                if (ms_jwt != null) {
-                    // TODO: Make sure we try with all the keys if some key fails
-                    JSONObject ms_flattened = verifyMetadataStatement(ms_jwt, fed_op, root_keys);
-                    System.out.println("Statement for federation id " + fed_op);
-                    System.out.println(ms_flattened.toString(2));
-                    return ms_flattened;
-                }
+    public static JSONObject getFederatedConfiguration(JSONObject unsigned_ms, JSONObject root_keys)
+            throws InvalidStatementException {
+        // Iterate over the trusted FOs
+        for (Iterator<String> it = root_keys.keys(); it.hasNext(); ) {
+            String fed_op = it.next();
+            System.out.println("Looking for a valid metadata_statement for " + fed_op);
+            String ms_jwt = getMetadataStatement(unsigned_ms, fed_op);
+            if (ms_jwt != null) {
+                JSONObject ms_flattened = verifyMetadataStatement(ms_jwt, fed_op, root_keys);
+                System.out.println("Statement for federation id " + fed_op);
+                System.out.println(ms_flattened.toString(2));
+                return ms_flattened;
             }
-            System.out.println("There are no metadata_statements for any trusted FO");
-        } catch (JOSEException | IOException | JSONException | ParseException | BadJOSEException e) {
-            System.out.println("There was a problem validating the federated metadata: " + e.toString());
         }
-        return null;
+        throw new InvalidStatementException("There are no metadata_statements for any trusted FO");
     }
 }

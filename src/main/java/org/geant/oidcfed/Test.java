@@ -15,17 +15,21 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class Main {
+public class Test {
     /* Disables SSL verification. ONLY FOR TESTING PURPOSES!!! */
     private static void disableSSLCertificateChecking() {
         TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
             public X509Certificate[] getAcceptedIssuers() {
                 return null;
             }
+
             @Override
-            public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {}
+            public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+            }
+
             @Override
-            public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {}
+            public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+            }
         }};
         try {
             SSLContext sc = SSLContext.getInstance("TLS");
@@ -44,16 +48,22 @@ public class Main {
 
     public static void main(String[] args) {
         disableSSLCertificateChecking();
+        JSONObject root_keys = null;
+        JSONObject discovery_doc = null;
+        FederatedMetadataStatement.MAX_CLOCK_SKEW = 30000000;
         try {
-            JSONObject root_keys = new JSONObject(new String(Files.readAllBytes(Paths.get("rootkeys.json"))));
+            root_keys = new JSONObject(new String(Files.readAllBytes(Paths.get("rootkeys.json"))));
             String url = "https://oidcfed.inf.um.es:8777/.well-known/openid-configuration";
-            //String url = "https://agaton-sax.com:8080/foo/rp-sms-multiple-l1/.well-known/openid-configuration";
-            JSONObject discovery_doc = new JSONObject(
-                    IOUtils.toString(new URL(url).openStream(), Charset.defaultCharset()));
+            //String url = "https://agaton-sax.com:8080/foo/rp-sms-wrong-key/.well-known/openid-configuration";
+            discovery_doc = new JSONObject(IOUtils.toString(new URL(url).openStream(), Charset.defaultCharset()));
+        } catch (IOException e) {
+            System.out.println("Could not get the discovery document or root keys: " + e.getMessage());
+            System.exit(-1);
+        }
+        try {
             JSONObject federated_conf = FederatedMetadataStatement.getFederatedConfiguration(discovery_doc, root_keys);
-        } catch (JSONException | IOException e) {
-            System.out.println("There was a problem validating the metadata. Check track trace for more details");
-            e.printStackTrace();
+        } catch (InvalidStatementException e) {
+            System.out.println("There was a problem validating the metadata: " + e.getMessage());
         }
     }
 }
