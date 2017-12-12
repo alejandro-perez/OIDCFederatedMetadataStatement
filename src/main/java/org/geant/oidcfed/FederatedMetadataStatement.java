@@ -205,8 +205,7 @@ public class FederatedMetadataStatement {
                 JSONObject inner_ms_flattened = verifyMetadataStatement(inner_ms_jwt, fed_op, root_keys);
 
                 /* add signing keys */
-                JWKSet inner_ms_sigkeys = JWKSet.parse(inner_ms_flattened.getJSONObject("signing_keys").toString());
-                keys.getKeys().addAll(inner_ms_sigkeys.getKeys());
+                keys = JWKSet.parse(inner_ms_flattened.getJSONObject("signing_keys").toString());
                 result = flatten(payload, inner_ms_flattened);
             }
             /* If there are no inner metadata statements, this is MS0 and root keys must be used for
