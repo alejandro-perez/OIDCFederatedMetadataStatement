@@ -1,7 +1,10 @@
 package org.geant.oidcfed;
 
-import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jose.proc.JWSKeySelector;
@@ -17,6 +20,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -189,7 +193,7 @@ public class FederatedMetadataStatement {
             /* Convert nimbus JSON object to org.json.JSONObject for simpler processing */
             JSONObject payload = new JSONObject(signedJWT.getPayload().toString());
 
-            System.out.println("Inspecting MS signed by: " + payload.getString("iss")
+            System.out.println("Inspecting MS signed by: " + payload.optString("iss")
                     + " with KID:" + signedJWT.getHeader().getKeyID());
 
             /* Collect inner MS (JWT encoded) */
@@ -217,7 +221,7 @@ public class FederatedMetadataStatement {
 
             /* verify the signature using the collected keys */
             verifySignature(signedJWT, keys);
-            System.out.println("Successful validation of signature of " + payload.getString("iss")
+            System.out.println("Successful validation of signature of " + payload.optString("iss")
                     + " with KID:" + signedJWT.getHeader().getKeyID());
             return result;
         } catch (ParseException e) {
@@ -249,5 +253,66 @@ public class FederatedMetadataStatement {
             }
         }
         throw new InvalidStatementException("There are no metadata_statements for any trusted FO");
+    }
+
+    /**
+     * Sings a document using the first key in signing_keys, using RS256 (must be a RSA key!)
+     * @param document Document to be signed
+     * @param signing_keys Signing keys
+     * @param iss Name of the issuer
+     * @return A serialized signed JWT
+     * @throws InvalidStatementException If something goes wrong
+     */
+    private static String sign(JSONObject document, JWKSet signing_keys, String iss) throws InvalidStatementException {
+        JWK key = signing_keys.getKeys().get(0);
+        document.put("iss", iss);
+        try {
+            RSAPrivateKey privateKey = null;
+            privateKey = RSAKey.parse(key.toString()).toRSAPrivateKey();
+
+            // Create RSA-signer with the private key
+            JWSSigner signer = new RSASSASigner(privateKey);
+
+            // Prepare JWS object with simple string as payload
+            JWSObject jwsObject = new JWSObject(
+                    new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(key.getKeyID()).build(),
+                    new Payload(document.toString()));
+
+            // Compute the RSA signature
+            jwsObject.sign(signer);
+            return jwsObject.serialize();
+        } catch (JOSEException | ParseException e) {
+            throw new InvalidStatementException(e.toString());
+        }
+    }
+
+    /**
+     * Generates the top level (MSn) metadata_statements JSON object, to be included into the unsigned docoment
+     * @param unsigned_ms Document to be signed
+     * @param sms Signed metadata statements of inferior level (MSn-1)
+     * @param signing_keys Signing keys
+     * @param iss Name of the issuer
+     * @return A JSONObject with the collection of Signed MS by this entity
+     * @throws InvalidStatementException When something goes wrong.
+     */
+    public static JSONObject genFederatedConfiguration(JSONObject unsigned_ms, JSONObject sms, JWKSet signing_keys, String iss)
+            throws InvalidStatementException {
+        // Object to contain the signed metadata statements
+        JSONObject top_level_sms = new JSONObject();
+        // Iterate over the SMS FOs
+        for (Iterator<String> it = sms.keys(); it.hasNext(); ) {
+            String fed_op = it.next();
+            // copy unsigned MS (to avoid modifying it)
+            JSONObject to_be_signed = new JSONObject(unsigned_ms.toString());
+            // create the metadata_statements claim
+            to_be_signed.put("metadata_statements", new JSONObject());
+            // add the narrowed SMS to the claim
+            to_be_signed.getJSONObject("metadata_statements").put(fed_op, sms.getString(fed_op));
+            // sign
+            String signed = sign(to_be_signed, signing_keys, iss);
+            // Add this to the collection
+            top_level_sms.put(fed_op, signed);
+        }
+        return top_level_sms;
     }
 }
