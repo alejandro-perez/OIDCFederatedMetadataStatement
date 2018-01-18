@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -266,6 +267,7 @@ public class FederatedMetadataStatement {
     private static String sign(JSONObject document, JWKSet signing_keys, String iss) throws InvalidStatementException {
         JWK key = signing_keys.getKeys().get(0);
         document.put("iss", iss);
+        document.put("exp", new Date().getTime() + 60 * 1000);
         try {
             RSAPrivateKey privateKey = null;
             privateKey = RSAKey.parse(key.toString()).toRSAPrivateKey();
