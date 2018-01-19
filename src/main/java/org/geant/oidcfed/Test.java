@@ -50,17 +50,17 @@ public class Test {
     public static void main(String[] args) {
         disableSSLCertificateChecking();
         JSONObject root_keys = null;
-        JWKSet signing_keys = null;
+        JSONObject signing_keys = null;
         JSONObject discovery_doc = null;
         JSONObject sms = null;
         FederatedMetadataStatement.MAX_CLOCK_SKEW = 0;
         try {
             root_keys = new JSONObject(new String(Files.readAllBytes(Paths.get("rootkeys.json"))));
-            signing_keys = JWKSet.parse(new String(Files.readAllBytes(Paths.get("signing_keys.jwks"))));
+            signing_keys = new JSONObject(new String(Files.readAllBytes(Paths.get("signing_keys.jwks"))));
             sms = new JSONObject(new String(Files.readAllBytes(Paths.get("sms.json"))));
             String url = "https://minifed.lxd:8777/.well-known/openid-configuration";
             discovery_doc = new JSONObject(IOUtils.toString(new URL(url).openStream(), Charset.defaultCharset()));
-        } catch (IOException | ParseException e ) {
+        } catch (IOException e ) {
             System.out.println("Could not get the discovery document or root keys: " + e.getMessage());
             System.exit(-1);
         }

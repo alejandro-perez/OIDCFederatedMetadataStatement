@@ -128,21 +128,22 @@ public class FederatedMetadataStatement {
      * Verifies the signature of a JWT using the indicated keys.
      *
      * @param signedJWT Signed JWT
-     * @param keys      Keys that can be used to verify the token
+     * @param json_keys      Keys that can be used to verify the token
      * @throws InvalidStatementException when the JWT is not valid or the signature cannot be validated
      */
-    private static void verifySignature(SignedJWT signedJWT, JWKSet keys) throws InvalidStatementException {
-        ConfigurableJWTProcessor jwtProcessor = new DefaultJWTProcessor();
-        JWSKeySelector keySelector = new JWSVerificationKeySelector(
-                signedJWT.getHeader().getAlgorithm(), new ImmutableJWKSet(keys));
-        DefaultJWTClaimsVerifier cverifier = new DefaultJWTClaimsVerifier();
-        /* Allow some clock skew as testing platform examples are static */
-        cverifier.setMaxClockSkew(FederatedMetadataStatement.MAX_CLOCK_SKEW);
-        jwtProcessor.setJWTClaimsSetVerifier(cverifier);
-        jwtProcessor.setJWSKeySelector(keySelector);
+    private static void verifySignature(SignedJWT signedJWT, JSONObject json_keys) throws InvalidStatementException {
         try {
+            JWKSet keys = JWKSet.parse(json_keys.toString());
+            ConfigurableJWTProcessor jwtProcessor = new DefaultJWTProcessor();
+            JWSKeySelector keySelector = new JWSVerificationKeySelector(
+                    signedJWT.getHeader().getAlgorithm(), new ImmutableJWKSet(keys));
+            DefaultJWTClaimsVerifier cverifier = new DefaultJWTClaimsVerifier();
+            /* Allow some clock skew as testing platform examples are static */
+            cverifier.setMaxClockSkew(FederatedMetadataStatement.MAX_CLOCK_SKEW);
+            jwtProcessor.setJWTClaimsSetVerifier(cverifier);
+            jwtProcessor.setJWSKeySelector(keySelector);
             jwtProcessor.process(signedJWT, null);
-        } catch (BadJOSEException | JOSEException e) {
+        } catch (BadJOSEException | JOSEException | ParseException e) {
             throw new InvalidStatementException(e.getMessage());
         }
     }
@@ -188,9 +189,6 @@ public class FederatedMetadataStatement {
             /* Parse the signed JWT */
             SignedJWT signedJWT = SignedJWT.parse(ms_jwt);
 
-            /* Create an empty JWKS to store gathered keys from the inner MSs */
-            JWKSet keys = new JWKSet();
-
             /* Convert nimbus JSON object to org.json.JSONObject for simpler processing */
             JSONObject payload = new JSONObject(signedJWT.getPayload().toString());
 
@@ -203,6 +201,9 @@ public class FederatedMetadataStatement {
             /* This will hold the result of the verification/decoding/flattening */
             JSONObject result;
 
+            /* Create an empty JWKS to store gathered keys from the inner MSs */
+            JSONObject keys;
+
             /* If there are more MSs, recursively analyzed them and return the flattened version
              * with the inner payload */
             if (inner_ms_jwt != null) {
@@ -210,13 +211,13 @@ public class FederatedMetadataStatement {
                 JSONObject inner_ms_flattened = verifyMetadataStatement(inner_ms_jwt, fed_op, root_keys);
 
                 /* add signing keys */
-                keys = JWKSet.parse(inner_ms_flattened.getJSONObject("signing_keys").toString());
+                keys = inner_ms_flattened.getJSONObject("signing_keys");
                 result = flatten(payload, inner_ms_flattened);
             }
             /* If there are no inner metadata statements, this is MS0 and root keys must be used for
              * validating the signature. Result will be the decoded payload */
             else {
-                keys = JWKSet.parse(root_keys.getJSONObject(fed_op).toString());
+                keys = root_keys.getJSONObject(fed_op);
                 result = payload;
             }
 
@@ -264,11 +265,11 @@ public class FederatedMetadataStatement {
      * @return A serialized signed JWT
      * @throws InvalidStatementException If something goes wrong
      */
-    private static String sign(JSONObject document, JWKSet signing_keys, String iss) throws InvalidStatementException {
-        JWK key = signing_keys.getKeys().get(0);
+    private static String sign(JSONObject document, JSONObject signing_keys, String iss) throws InvalidStatementException {
         document.put("iss", iss);
         document.put("exp", new Date().getTime() + 60 * 1000);
         try {
+            JWK key = JWKSet.parse(signing_keys.toString()).getKeys().get(0);
             RSAPrivateKey privateKey = null;
             privateKey = RSAKey.parse(key.toString()).toRSAPrivateKey();
 
@@ -297,7 +298,7 @@ public class FederatedMetadataStatement {
      * @return A JSONObject with the collection of Signed MS by this entity
      * @throws InvalidStatementException When something goes wrong.
      */
-    public static JSONObject genFederatedConfiguration(JSONObject unsigned_ms, JSONObject sms, JWKSet signing_keys, String iss)
+    public static JSONObject genFederatedConfiguration(JSONObject unsigned_ms, JSONObject sms, JSONObject signing_keys, String iss)
             throws InvalidStatementException {
         // Object to contain the signed metadata statements
         JSONObject top_level_sms = new JSONObject();
