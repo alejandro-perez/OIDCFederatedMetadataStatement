@@ -2,9 +2,7 @@ package org.geant.oidcfed;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jose.proc.JWSKeySelector;
@@ -258,20 +256,30 @@ public class FederatedMetadataStatement {
     }
 
     /**
-     * Sings a document using the first key in signing_keys, using RS256 (must be a RSA key!)
+     * Sings a document using the first RSA key for signature in signing_keys, using RS256 (must be a RSA key)
      * @param document Document to be signed
-     * @param signing_keys Signing keys
-     * @param iss Name of the issuer
+     * @param signing_keys Signing key (JWKS)
+     * @param iss Name of the issuer for the "iss" claim
      * @return A serialized signed JWT
      * @throws InvalidStatementException If something goes wrong
      */
     private static String sign(JSONObject document, JSONObject signing_keys, String iss) throws InvalidStatementException {
         document.put("iss", iss);
-        document.put("exp", new Date().getTime() + 60 * 1000);
+        // Expires in 15 minutes
+        document.put("exp", new Date().getTime() + 60 * 15);
         try {
-            JWK key = JWKSet.parse(signing_keys.toString()).getKeys().get(0);
-            RSAPrivateKey privateKey = null;
-            privateKey = RSAKey.parse(key.toString()).toRSAPrivateKey();
+            JWKSet jwkSet = JWKSet.parse(signing_keys.toString());
+            List<JWK> matches = new JWKSelector(new JWKMatcher.Builder()
+                    .keyType(KeyType.RSA)
+                    .keyUse(KeyUse.SIGNATURE)
+                    .build())
+                    .select(jwkSet);
+
+            if (matches.size() == 0)
+                throw new InvalidStatementException("No signing RSA key found!");
+
+            JWK key = matches.get(0);
+            RSAPrivateKey privateKey = RSAKey.parse(key.toString()).toRSAPrivateKey();
 
             // Create RSA-signer with the private key
             JWSSigner signer = new RSASSASigner(privateKey);
