@@ -266,7 +266,7 @@ public class FederatedMetadataStatement {
     private static String sign(JSONObject document, JSONObject signing_keys, String iss) throws InvalidStatementException {
         document.put("iss", iss);
         // Expires in 15 minutes
-        document.put("exp", new Date().getTime() + 60 * 15);
+        document.put("exp", (new Date().getTime() / 1000) + 60 * 15);
         try {
             JWKSet jwkSet = JWKSet.parse(signing_keys.toString());
             List<JWK> matches = new JWKSelector(new JWKMatcher.Builder()
